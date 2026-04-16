@@ -1,136 +1,150 @@
-Distributed Systems Failure Analyzer
-An OpenEnv RL environment where an AI agent analyzes logs from distributed microservices and identifies failures, root causes, and degradation patterns. Built for the Meta × PyTorch × Scaler OpenEnv Hackathon 2026.
+ # Distributed Systems Failure Analyzer
 
-🎯 Problem Statement
-Real-world distributed systems fail in complex ways. This environment simulates realistic service logs at three difficulty levels — from an obvious single-service crash to a subtle intermittent failure buried across six noisy services. The agent must act like a real Site Reliability Engineer (SRE) and diagnose what went wrong.
+## Overview
 
-📋 Three Tasks
-✅ Task 1 — Easy
-Services: 1
+A reproducible environment for diagnosing failures in distributed systems. The project simulates realistic failure scenarios, provides structured inputs (logs, traces, timelines), and evaluates agent diagnoses using a reward-based scoring system.
 
-Error rate: 99% (obvious spike)
+The objective is to treat debugging as a structured reasoning task that can be measured, compared, and improved.
 
-Log quality: Clean logs
 
-Agent output: {"service_name": "...", "error_code": "..."}
+## Problem Statement
 
-Grader: service_name=0.5 + error_code=0.5 = 1.0
+Production distributed systems present significant diagnostic challenges:
 
-✅ Task 2 — Medium
-Services: 3
+* Failures propagate across multiple services and obscure root causes
+* Observability data is often noisy, incomplete, or misleading
+* Root causes are masked by downstream effects
+* Manual debugging is time-consuming and inconsistent
 
-Error rate: ~40% (subtle)
+This project provides a controlled framework for evaluating and improving automated failure diagnosis.
 
-Log quality: Partial logs
 
-Agent output: {"root_service": "...", "affected_service": "..."}
+## Approach
 
-Grader: root_service=0.6 + affected_service=0.4 = 1.0
+The system models diagnosis as a structured interaction:
 
-✅ Task 3 — Hard
-Services: 6
+* **Input:** synthetic logs, event timelines, and service dependency graphs
+* **Output:** constrained JSON diagnosis following strict schemas
+* **Evaluation:** reward-based scoring with partial credit and root-cause emphasis
 
-Error rate: ~8% (intermittent)
+This enables repeatable evaluation and direct comparison of different agents or strategies.
 
-Log quality: Noisy with red herrings
 
-Agent output: {"root_service":"...","endpoint":"...","failure_pattern":"...","severity":"..."}
+## System Design
 
-Grader: root=0.4 + endpoint=0.2 + pattern=0.2 + severity=0.2 = 1.0
+### Environment
 
-🏆 Reward Function
-All fields correct: 1.0
+The environment simulates a multi-service system with configurable:
 
-Most fields correct: 0.6 – 0.8
+* Error rates
+* Latency variations
+* Noise and misleading signals
 
-Some fields correct: 0.2 – 0.5
+Each episode represents a distinct failure scenario.
 
-All fields wrong: 0.0
 
-Partial credit is awarded per field, ensuring RL agents always receive a meaningful learning signal.
+### Task Levels
 
-🚀 Quick Start
-Install
+Three difficulty tiers increase ambiguity and reasoning complexity:
 
-bash
-pip install -r requirements.txt
-Run server locally
+**Easy**
+Single-service failure with a strong error signal and clean logs.
+Objective: identify failing service and error code.
 
-bash
-uvicorn server.app:app --host 0.0.0.0 --port 7860
-Test the API
+**Medium**
+Cascading failure with partial or missing logs.
+Objective: identify root service and affected service.
 
-bash
-# Reset to easy task
-curl -X POST http://localhost:7860/reset -H "Content-Type: application/json" -d '{"task": "easy"}'
+**Hard**
+Intermittent or low-signal failures with noisy logs and red herrings.
+Objective: identify root service, endpoint, failure pattern, and severity.
 
-# Submit an answer
-curl -X POST http://localhost:7860/step -H "Content-Type: application/json" -d '{"service_name": "payment-api", "error_code": "HTTP_500"}'
 
-# Check current state
-curl http://localhost:7860/state
-Run inference
+## Observations
 
-bash
-export HF_TOKEN=hf_your_token_here
-export MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.3
-export API_BASE_URL=https://api-inference.huggingface.co/v1
+Depending on the task, the agent receives:
 
-python inference.py
-🐳 Docker
-bash
-# Build the image
-docker build -t failure-analyzer .
+* Service logs with timestamps and metrics
+* Event timelines showing causal ordering
+* Distributed trace graphs showing service interactions
 
-# Run it
-docker run -p 7860:7860 failure-analyzer
-📁 Project Structure
-Code
+
+## Action Space
+
+The agent must return structured JSON:
+
+* Easy: `service_name`, `error_code`
+* Medium: `root_service`, `affected_service`
+* Hard: `root_service`, `endpoint`, `failure_pattern`, `severity`
+
+Strict schemas enforce precise, machine-readable outputs.
+
+
+## Reward Function
+
+Scoring is normalized to the range `[0.0, 1.0]`.
+
+Key properties:
+
+* Partial credit for partially correct answers
+* Higher weight for correctly identifying root causes
+* Deterministic scoring for reproducibility
+  
+
+## Key Features
+
+* Realistic synthetic log and trace simulation
+* Multi-level difficulty with increasing ambiguity
+* Structured evaluation with partial-credit scoring
+* Designed for integration with LLM-based or programmatic agents
+* Supports both interactive UI and automated evaluation
+
+
+## Live Demo
+
+The project is deployed on Hugging Face:
+
+https://aadilparwez-distributed-failure-analyser.hf.space
+
+The interface supports:
+
+* Task selection
+* Log visualization
+* Automated failure diagnosis
+* Scoring and feedback
+
+
+## Project Structure
+
+```
 failure_analyzer/
-├── models.py              ← Pydantic models
-├── environment.py         ← Game logic, log generators, reward graders
-├── app.py                 ← FastAPI server (/reset /step /state)
-├── inference.py           ← LLM agent with required log format
-├── requirements.txt       ← Python dependencies
-├── Dockerfile             ← Container for HF Spaces
-├── openenv.yaml           ← OpenEnv spec config
-└── README.md              ← Documentation
-🔌 API Reference
-GET / → Health check
+├── models.py
+├── server/
+├── environment.py
+│── app.py
+├── inference.py
+├── requirements.txt
+└── README.md
+```
 
-POST /reset → Start new episode ({"task": "easy"})
+## Limitations
 
-POST /step → Submit task-specific JSON
+* Uses synthetic data rather than production logs
+* Limited scenario diversity
+* LLM-based inference depends on external models and APIs
 
-GET /state → Current environment state
+## Future Work
 
-📐 Action Spaces
-Easy: {"service_name": "payment-api", "error_code": "HTTP_500"}
+* Integration with real observability pipelines
+* Expansion of scenario generation
+* Learning-based agents instead of static prompting
+* Advanced visualization for traces and timelines
+* Real-time failure simulation
 
-Medium: {"root_service": "auth-service", "affected_service": "checkout-api"}
 
-Hard:
+## Conclusion
 
-json
-{
-  "root_service": "user-db",
-  "endpoint": "/api/v1/query",
-  "failure_pattern": "intermittent_timeout",
-  "severity": "high"
-}
-Valid failure_pattern: intermittent_timeout, error_spike, memory_leak, connection_pool_exhausted, cascading_crash  
-Valid severity: low, medium, high, critical
+This project demonstrates that failure diagnosis in distributed systems can be formalized as a structured, evaluable process. By combining simulation, constrained outputs, and reward-based evaluation, it provides a foundation for building automated debugging systems.
 
-📊 Example Inference Log Output
-Code
-[START] task=easy env=failure_analyzer model=mistralai/Mistral-7B-Instruct-v0.3
-[STEP] step=1 action={"service_name":"payment-api","error_code":"HTTP_500"} reward=1.00 done=true
-[END] success=true steps=1 score=1.00
 
-[START] task=medium env=failure_analyzer model=mistralai/Mistral-7B-Instruct-v0.3
-[STEP] step=1 action={"root_service":"auth-service","affected_service":"checkout-api"} reward=1.00 done=true
-[END] success=true steps=1 score=1.00
 
-[START] task=hard env=failure_analyzer model=mistralai/Mistral-7B-Instruct-v0.3
-[STEP] step=1 action={"root_service":"user-db","endpoint":"/api/v1/query","failure_pattern":"intermittent_timeout","severity":"high"} reward=1.00 done=true
-[END] success=true steps=1 score=1.00
