@@ -176,8 +176,7 @@ Returns current environment state:
 failure_analyzer_backend/
 ├── models.py
 ├── environment.py
-├── server/
-│   └── app.py
+│── app.py
 ├── inference.py
 ├── requirements.txt
 └── README.md
