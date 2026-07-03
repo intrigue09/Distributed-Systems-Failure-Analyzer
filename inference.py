@@ -17,7 +17,7 @@ except ImportError:
 
 # ── Add project root to path ────────────────────────────────
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from server.environment import FailureAnalyzerEnvironment
+from environment import FailureAnalyzerEnvironment
 
 # ── Configuration from environment variables ────────────────
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1")
